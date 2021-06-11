@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensors</title>
+</head>
+<body>
+    <h1>
+        Kerr Home
+    </h1>
+
+    {% for sensor in sensors %}
+        <h3>{{sensor.name}}</h3>
+        <ul>
+            <li>last value: {{sensor.last_numeric}}</li>
+            <li>last read: {{sensor.last_eastern}}</li>
+            <li>{{sensor.count}} readings</li>
+            <li>{{sensor.average}} average</li>
+        </ul>
+    {% endfor %}
+</body>
+</html>

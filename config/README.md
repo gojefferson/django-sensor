@@ -1,0 +1,2 @@
+- `nginx-site` needs to be copied into `/etc/nginx/sites-available` and then a symlink needs to be created in `/etc/nginx/sites
+- `gunicorn.socket` and `gunicorn.service` both go in `/etc/systemd/system/`

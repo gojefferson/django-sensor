@@ -1,0 +1,17 @@
+[Unit]
+Description=gunicorn daemon
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User=jeff
+Group=www-data
+WorkingDirectory=/home/jeff/home-django_sensor/api
+ExecStart=/home/jeff/.cache/pypoetry/virtualenvs/django_sensor-HSwoxlTM-py3.8/bin/gunicorn \
+          --access-logfile - \
+          --workers 3 \
+          --bind unix:/run/gunicorn.sock \
+          django_sensor.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
