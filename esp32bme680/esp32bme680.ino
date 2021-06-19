@@ -28,10 +28,15 @@ const char* password = WIFI_PASSWORD;
  * posting another reading.
  *
  */
-#define SLEEP_SECONDS 3
+#define SLEEP_SECONDS 60 * 5
 
 #define LONG_SLEEP_MS SLEEP_SECONDS * 1000
 
+float tempF;
+float pressureHpa;
+float humidityPercent;
+float gasResistanceKohms;
+float altitudeMeters;
 String payload;
 
 void connectWifi()
@@ -95,6 +100,8 @@ void postData(String name, float measured) {
     String str;
     serializeJson(doc, str);
 
+    Serial.println(str);
+
     HTTPClient http;
 
     http.begin(HTTP_POST_ENDPOINT);
@@ -135,24 +142,34 @@ void loop()
       Serial.println("Failed to perform reading :(");
       return;
     }
-    Serial.print("Temperature = ");
-    Serial.print(bme.temperature);
-    Serial.println(" *C");
 
+    tempF = (bme.temperature * (9.0 / 5.0)) + 32.0;
+    postData("temp", tempF);
+    Serial.print("Temperature = ");
+    Serial.print(tempF);
+    Serial.println(" *F");
+
+    pressureHpa = bme.pressure / 100.0;
+    postData("pressure", pressureHpa);
     Serial.print("Pressure = ");
-    Serial.print(bme.pressure / 100.0);
+    Serial.print(pressureHpa);
     Serial.println(" hPa");
 
+    humidityPercent = bme.humidity;
+    postData("humid", humidityPercent);
     Serial.print("Humidity = ");
-    Serial.print(bme.humidity);
+    Serial.print(humidityPercent);
     Serial.println(" %");
 
+    gasResistanceKohms = bme.gas_resistance / 1000.0;
+    postData("gas", gasResistanceKohms);
     Serial.print("Gas = ");
-    Serial.print(bme.gas_resistance / 1000.0);
+    Serial.print(gasResistanceKohms);
     Serial.println(" KOhms");
 
+    altitudeMeters = bme.readAltitude(SEALEVELPRESSURE_HPA);
     Serial.print("Approx. Altitude = ");
-    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    Serial.print(altitudeMeters);
     Serial.println(" m");
 
     Serial.println();
