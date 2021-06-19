@@ -1,15 +1,20 @@
-/*
- * To compile this sketch you need:
- * - the "DHT sensor library" from Adafruit: https://github.com/adafruit/DHT-sensor-library
- * - ArduinoJson: https://arduinojson.org/
- * 
- */
-
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
-#include <DHT.h>;
 #include "arduino_secrets.h"
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include "Adafruit_BME680.h"
+
+#define BME_SCK 13
+#define BME_MISO 12
+#define BME_MOSI 11
+#define BME_CS 10
+
+#define SEALEVELPRESSURE_HPA (1013.25)
+
+Adafruit_BME680 bme; // I2C
 
 /*  WIFI CREDENTIALS: these must be set in arduino_secrets.h, which must
  *  be located in the same directory as this sketch. It we ignore this file
@@ -19,33 +24,14 @@ const char* ssid     = WIFI_NETWORK_NAME;
 const char* password = WIFI_PASSWORD;
 
 /*
- * Select the pin on the ESP32 that is connected to the data pin
- * on the DHT 22. This is usually a yellow wire, though some tutorials
- * show a different colored wire.
- *
- * Here are some tutorials for connecting the DHT 22 to an ESP32:
- * - https://randomnerdtutorials.com/esp32-dht11-dht22-temperature-humidity-sensor-arduino-ide/
- * - https://learn.adafruit.com/dht/connecting-to-a-dhtxx-sensor
- *
- * Note: some DHT 22 sensors do not seem to need a pull up resistor or else have
- * one pre-installed.
- */
-#define DHTPIN 5     // what pin we're connected to
-
-/*
  * Edit SLEEP_SECONDS to choose how long you want the ESP32 to sleep before
  * posting another reading.
  *
  */
-#define SLEEP_SECONDS 120 // sleep for 2 minutes
+#define SLEEP_SECONDS 3
 
 #define LONG_SLEEP_MS SLEEP_SECONDS * 1000
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
 
-DHT dht(DHTPIN, DHTTYPE); //// Initialize DHT sensor for normal 16mhz Arduino
-
-float hum;  //Stores humidity value
-float temp; //Stores temperature value
 String payload;
 
 void connectWifi()
@@ -73,13 +59,29 @@ void connectWifi()
 
 }
 
+void initializeSensor() {
+  if (!bme.begin()) {
+    Serial.println("Could not find a valid BME680 sensor, check wiring!");
+    while (1);
+  }
+
+  // Set up oversampling and filter initialization
+  bme.setTemperatureOversampling(BME680_OS_8X);
+  bme.setHumidityOversampling(BME680_OS_2X);
+  bme.setPressureOversampling(BME680_OS_4X);
+  bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
+  bme.setGasHeater(320, 150); // 320*C for 150 ms
+
+}
+
 void setup()
 {
     Serial.begin(115200);
     delay(10);
-    dht.begin();
 
+    initializeSensor();
     connectWifi();
+    
 }
 
 const String HTTP_POST_ENDPOINT = String("http://") + String(SERVER_IP_ADDR) + String("/sensor-data/");
@@ -129,11 +131,32 @@ void loop()
       Serial.println("WiFi still connected");
     }
 
-    hum = dht.readHumidity();
-    temp= dht.readTemperature(true);
+    if (! bme.performReading()) {
+      Serial.println("Failed to perform reading :(");
+      return;
+    }
+    Serial.print("Temperature = ");
+    Serial.print(bme.temperature);
+    Serial.println(" *C");
 
-    postData("hum", hum);
-    postData("temp", temp);
+    Serial.print("Pressure = ");
+    Serial.print(bme.pressure / 100.0);
+    Serial.println(" hPa");
+
+    Serial.print("Humidity = ");
+    Serial.print(bme.humidity);
+    Serial.println(" %");
+
+    Serial.print("Gas = ");
+    Serial.print(bme.gas_resistance / 1000.0);
+    Serial.println(" KOhms");
+
+    Serial.print("Approx. Altitude = ");
+    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    Serial.println(" m");
+
+    Serial.println();
+
     Serial.println("Sleeping...");
     delay(LONG_SLEEP_MS);
     Serial.println("Waking up ...");
